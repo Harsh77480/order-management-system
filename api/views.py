@@ -8,6 +8,11 @@ from rest_framework.decorators import api_view
 from rest_framework import generics
 from rest_framework.permissions import IsAuthenticated as isAuthenticated
 from rest_framework.views import APIView
+from rest_framework.permissions import AllowAny 
+from .filters import OrderFilters, ProductFilters
+from rest_framework.pagination import PageNumberPagination
+from rest_framework import viewsets
+from rest_framework.decorators import action
 
 @api_view(['GET'])
 def product_list(request):
@@ -42,13 +47,20 @@ class ProductListView(generics.ListAPIView):
     queryset = Product.objects.all()
     serializer_class = ProductSerializer
 
-class ProductDetailView(generics.RetrieveAPIView):
+class ProductDetailView(generics.RetrieveUpdateDestroyAPIView):
     queryset = Product.objects.all()
     serializer_class = ProductSerializer
+    permission_classes = [isAuthenticated] 
+
+    def get_permissions(self):
+        print(self.request.method)
+        self.permission_classes = [AllowAny] if self.request.method == 'GET' else [isAuthenticated] 
+        return super().get_permissions()
         
 class OrderListView(generics.ListAPIView):
     queryset = Order.objects.prefetch_related('items','items__product').all()
-    serializer_class = OrderSerializer
+    serializer_class = OrderSerializer 
+    permission_classes = [isAuthenticated] 
 
 class UserOrderListView(generics.ListAPIView):
     serializer_class = OrderSerializer
@@ -72,5 +84,21 @@ class ProductInfoAPIView(APIView):
 class ProductListCreateView(generics.ListCreateAPIView):
     queryset = Product.objects.all()
     serializer_class = ProductSerializer
+    permission_classes = [AllowAny]
+    filter_backends = [ProductFilters] 
+    pagination_class = PageNumberPagination
+    pagination_class.page_size = 4
+    pagination_class.page_size_query_param = 'size'
+    pagination_class.max_page_size = 10
 
 
+class OrderViewSet(viewsets.ModelViewSet):
+    queryset = Order.objects.prefetch_related('items','items__product').all()
+    serializer_class = OrderSerializer
+    filter_backends = [OrderFilters]
+    
+    @action(detail=False, methods=['get'], url_path='user-orders', permission_classes=[isAuthenticated])
+    def user_orders(self, request):    
+        orders = self.get_queryset().filter(user=request.user)
+        serializer = self.get_serializer(orders, many=True)
+        return Response(serializer.data)
