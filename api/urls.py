@@ -1,8 +1,10 @@
 from django.urls import path
 from . import views
 from rest_framework.routers import DefaultRouter
+
 # Define URL patterns for the API endpoints
 # For each endpoint, we have both function-based and class-based views
+# The APIs below support the Django REST Framework browsable interface when accessed via a web browser.
 
 urlpatterns = [
     path('products/', views.ProductListCreateView.as_view()),

@@ -1,10 +1,13 @@
 from rest_framework import serializers
 from .models import Product, Order, OrderItem
+from django.db import transaction
 
 
-class ProductSerializer(serializers.ModelSerializer):
+
+class ProductSerializer(serializers.ModelSerializer): # ModelSerializer is a serializer that works with Django models
     class Meta:
         model = Product
+        # also possible to use exclude instead of fields
         fields = (
             'id',
             'name',
@@ -12,7 +15,7 @@ class ProductSerializer(serializers.ModelSerializer):
             'stock',
         )
 
-    def validate_price(self, value):
+    def validate_price(self, value): # this a custom validation on price field, validate_<fieldname> is automatically called to validate that field
         if value <= 0:
             raise serializers.ValidationError(
                 "Price must be greater than 0."
@@ -30,6 +33,7 @@ class OrderItemSerializer(serializers.ModelSerializer):
     class Meta:
         model = OrderItem
         fields = (
+            'id',
             'product_name',
             'product_price',
             'quantity',
@@ -38,8 +42,9 @@ class OrderItemSerializer(serializers.ModelSerializer):
 
 
 class OrderSerializer(serializers.ModelSerializer):
+    
     order_id = serializers.UUIDField(read_only=True)
-    items = OrderItemSerializer(many=True, read_only=True)
+    items = OrderItemSerializer(many=True, read_only=True) 
     total_price = serializers.SerializerMethodField()
 
     def get_total_price(self, obj):
@@ -62,3 +67,46 @@ class ProductInfoSerializer(serializers.Serializer):
     products = ProductSerializer(many=True)
     count = serializers.IntegerField()
     max_price = serializers.FloatField()
+
+
+
+
+class OrderItemCreateSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = OrderItem
+        fields = (
+            'product',
+            'quantity',
+        )
+
+class OrderCreateSerializer(serializers.ModelSerializer):
+    items = OrderItemCreateSerializer(many=True,required=False)
+    user = serializers.PrimaryKeyRelatedField(read_only=True)
+
+    class Meta:
+        model = Order
+        fields = (
+            'user',
+            'status',
+            'items',
+        )
+
+    def create(self, validated_data):
+        items_data = validated_data.pop('items')
+        with transaction.atomic():
+            order = Order.objects.create(**validated_data)
+            for item_data in items_data:
+                OrderItem.objects.create(order=order, **item_data)
+            return order
+
+
+    def update(self, instance, validated_data):
+        items_data = validated_data.pop('items', None)
+        with transaction.atomic():
+            instance = super().update(instance, validated_data)
+            if items_data is not None:
+                instance.items.all().delete()
+                for item_data in items_data:
+                    OrderItem.objects.create(order=instance, **item_data)
+
+        return instance

@@ -1,7 +1,7 @@
 from pyclbr import Class
 from django.db.models import Max
 from django.shortcuts import get_object_or_404
-from api.serializers import ProductSerializer, OrderSerializer, ProductInfoSerializer
+from api.serializers import OrderCreateSerializer, ProductSerializer, OrderSerializer, ProductInfoSerializer
 from api.models import Product, Order, OrderItem
 from rest_framework.response import Response
 from rest_framework.decorators import api_view
@@ -102,3 +102,12 @@ class OrderViewSet(viewsets.ModelViewSet):
         orders = self.get_queryset().filter(user=request.user)
         serializer = self.get_serializer(orders, many=True)
         return Response(serializer.data)
+    
+    def get_serializer(self, *args, **kwargs):
+        if self.action == 'create' or self.action == 'update' or self.action == 'partial_update':
+            kwargs['context'] = self.get_serializer_context()
+            return OrderCreateSerializer(*args, **kwargs)
+        return super().get_serializer(*args, **kwargs)
+    
+    def perform_create(self, serializer):
+        serializer.save(user=self.request.user) 
