@@ -261,5 +261,3 @@ def create(self, request, *args, **kwargs):
 - allows us to send limit the number requests per user, anonymus and authenticated both     
 
 
-### Todo 
-- flow of viewset create, perform create, get_serializer, create, serializer.save(), etc.
