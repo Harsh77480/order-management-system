@@ -127,6 +127,22 @@ def create(self, request, *args, **kwargs):
 
 ````
 
+### The sequence of important methods : 
+When we send a POST request to a DRF endpoint (`VIEW`), it triggers the `create action`. Then these methods are called in follow sequence from the `VIEW` inside `create()`
+
+-> `create(self, request, *args, **kwargs)` : this is the manager method. 
+
+-> `get_serializer(self, *args, **kwargs)` : with request.data 
+
+-> `serializer.is_valid()` 
+
+-> `perform_create (self, serializer)` : this is specifically designed to override withoud breaking the whole create logic.
+
+-> `serializer.save(**kwargs)` : this dertermines whether to call .create() or .update() inside the serializer.
+
+
+
+
 ### \api\views.py 
 `ProductInfoAPIView()`
 - is an APIView, which very powerfull since we can override get, post, etc. to write custom logic 
