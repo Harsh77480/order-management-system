@@ -277,5 +277,3 @@ When we send a POST request to a DRF endpoint (`VIEW`), it triggers the `create 
 - allows us to send limit the number requests per user, anonymus and authenticated both     
 
 
-### Todo 
-- flow of viewset create, perform create, get_serializer, create, serializer.save(), etc.
