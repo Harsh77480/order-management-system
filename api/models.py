@@ -1,19 +1,20 @@
 import uuid
 from django.db import models
 from django.contrib.auth.models import AbstractUser
-
+from django.core.validators import MinValueValidator, MaxValueValidator
 
 class User(AbstractUser):
     pass
 
 
-class Product(models.Model):
+class Product(models.Model): # Model automatically adds 'id' as pk if we don't define a PK. pk is reference to field that is primary key id. Here pk is id but in Order table pk is order_id. When we don't know name of pk we can reference as .objects.get(pk='')
     name = models.CharField(max_length=200)
     description = models.TextField()
     price = models.DecimalField(max_digits=10, decimal_places=2)  # decimal field with 10 digits total, 2 reserved for decimal
     stock = models.PositiveIntegerField()
-    image = models.ImageField(upload_to='products/', blank=True, null=True)
-
+    image = models.ImageField(upload_to='products/', blank=True, null=True) # null = True means allowing null value but blank = True is only RELATED TO FORMS, it means ACCEPT THE FORM WITHOUT THIS FIELD
+                                                                            # if blank = False and null = True, serializer.save() will fail without that field eventhough null = True. 
+                                                                            # If blank = True and null = False, form will accept value and model will be saved with '' in case of Charfield but other fields will give error in no default is set. This is used when we want a default and allow user to skip the field.
     @property  # lets you access method as attribute
     def in_stock(self): 
         return self.stock > 0
@@ -30,7 +31,7 @@ class Order(models.Model):
 
     order_id = models.UUIDField(primary_key=True, default=uuid.uuid4)
     user = models.ForeignKey(User, on_delete=models.CASCADE)
-    created_at = models.DateTimeField(auto_now_add=True) # auto_now_add sets timestamp when created
+    created_at = models.DateTimeField(auto_now_add=True) # auto_now_add sets timestamp when created, auto_now = True changes at every update
     status = models.CharField(
         max_length=10,
         choices=StatusChoices.choices,
@@ -64,3 +65,20 @@ class OrderItem(models.Model):
     
     def __str__(self):
         return f"{self.quantity} x {self.product.name} in Order {self.order.order_id}"
+    
+
+class Review(models.Model):
+    product = models.ForeignKey(Product, on_delete=models.CASCADE, related_name='reviews')
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    rating = models.IntegerField(
+        validators=[MinValueValidator(1), MaxValueValidator(5)] # Enforces logic at model level
+    )
+    comment = models.TextField(blank=True)
+
+    class Meta:
+        # Ensures a user can only leave ONE review per product
+        unique_together = ('product', 'user') 
+
+    def __str__(self):
+        return f"{self.rating} stars for {self.product.name} by {self.user.username}"
+    
