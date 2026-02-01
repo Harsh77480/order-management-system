@@ -1,8 +1,9 @@
 from django.contrib import admin
-from .models import  Product, User, Order, OrderItem
+from .models import  Product, User, Order, OrderItem, Review
 admin.site.register(Product) 
 admin.site.register(User)
 admin.site.register(OrderItem)
+admin.site.register(Review)
 
 class OrderItemInline(admin.TabularInline):
     model = OrderItem
