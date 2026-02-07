@@ -4,7 +4,7 @@
 ## Setup 
 ```
 Python 3.14.2 
-python -m venv vevn 
+python -m venv venv
 venv\Scripts\activate
 python -m pip install -r requirements.txt
 ```
@@ -38,12 +38,12 @@ api\management\populate_db.py is custom script for creating dummy instances
 
 [models](https://github.com/Harsh77480/order-management-system/blob/master/api/models.py)
 
+***DRF URLs returns a browsable page if you open them in browser***
 
 ### \api\views.py  
 `product_list()`
-- uses @api_view decorater with ['GET'] input, we can also add PUT, POST, etc in this array too. By default this api will return a browsable page because of @api_view, we need to pass query param ?format=json for pure json response. 
+- uses @api_view decorater with ['GET'] input, we can also add PUT, POST, etc in this array too. because of @api_view, we need to pass query param ?format=json for pure json response. 
 - using ProductSerializer() with param many=True, since we are using it for listing. 
-
 
 ### \api\serializers.py
 `OrderSerializer()`
@@ -53,8 +53,8 @@ api\management\populate_db.py is custom script for creating dummy instances
 
 - for this to work, field name of child serializer(OrderItemSerializer) in parent Serializer(OrderSerializer), must be same as `related_name` (items, in our case) 
 
-- `field_name` = SerializerMethodField(), is custom field (not a model field) which can be used to return any type of logic. Just define a method in your serializer as get_`field_name`() to calculate the logic. This method accepts self and obj, obj being an instance of `Model` used in current serializer. Like we have created total_price field.
-
+- `field_name` = SerializerMethodField(), is custom field (not a model field) which can be used to return any type of logic. Just define a method in your serializer as get_`field_name`() to calculate the logic. This method accepts self and obj, obj being an instance of `Model` used in current serializer. Like we have created total_price field. ***This receives (self,instance)***
+    
 
 `OrderItemSerializer()` 
 - we can have serializer fields CharField and DecimalField, just like model and also define the source(model field) from which we want to populate it(product.name).
@@ -107,6 +107,8 @@ api\management\populate_db.py is custom script for creating dummy instances
 
 - We can overide `get_permissions`() for custom permissions   
 
+***get_permissions is improtant***
+
 
 
 ### Mixins : `IMPORTANT` 
@@ -116,7 +118,7 @@ api\management\populate_db.py is custom script for creating dummy instances
 
 - APIView, generic Views, etc. inherit these mixins.
 
-- The `default create` method in CreateModelMixin :
+- The `default create` method in CreateModelMixin : ***IMPORTANT***
 ````
 def create(self, request, *args, **kwargs):
     serializer = self.get_serializer(data=request.data)
@@ -124,7 +126,6 @@ def create(self, request, *args, **kwargs):
     self.perform_create(serializer)
     headers = self.get_success_headers(serializer.data)
     return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
-
 ````
 
 ### The sequence of important methods : 
@@ -138,14 +139,14 @@ When we send a POST request to a DRF endpoint (`VIEW`), it triggers the `create 
 
 -> `perform_create (self, serializer)` : this is specifically designed to override withoud breaking the whole create logic.
 
--> `serializer.save(**kwargs)` : this dertermines whether to call .create() or .update() inside the serializer.
+-> `serializer.save(**kwargs)` : (called from perform_create) this dertermines whether to call .create() or .update() inside the serializer.
 
 
 
 
 ### \api\views.py 
 `ProductInfoAPIView()`
-- is an APIView, which very powerfull since we can override get, post, etc. to write custom logic 
+- is an APIView, which very powerfull since we can override get, post, etc. to write custom logic. 
 
 `ProductListCreateView()`
 - is a generics.ListCreateView. `ListCreateView inherits both ListModelMixin and CreateModelMixin`
@@ -190,7 +191,7 @@ When we send a POST request to a DRF endpoint (`VIEW`), it triggers the `create 
 
 
 ### Pagination 
-* upate REST_FRAMEWORK dictionary in settings.py 
+* update REST_FRAMEWORK dictionary in settings.py 
 - add DEFAULT_PAGINATION_CLASS with page size (number of entries/instances per page) 
 - in all get api responses will have 3 new attributes, 
 - `next` : next page url (same url with ?page=2)
@@ -198,25 +199,21 @@ When we send a POST request to a DRF endpoint (`VIEW`), it triggers the `create 
 - `count` : totla number of pages 
 - the pagination applies after filter_queryset, on `final` queryset so we can use it with ordering and filtering 
 * ProductListCreateView
-- we have view specific `page_size` we can do it like we have done in this view, by setting `pagination_class.page_size`
-- we can we allow client to specify size by defining `page_size_query_param` in our view, like pagination_class.page_size_query_param = 'size'
+- we can have view specific `page_size` we can do it like we have done in this view, by setting `pagination_class.page_size`
+- we can allow client to specify size by defining `page_size_query_param` in our view, like pagination_class.page_size_query_param = 'size'
 - if client calls /products?size=4  `page_size` will become 4, 
 - add pagination_class.max_page_size = 100 so that client can't do something like `?size=10000000000`
 
 
 ### Viewsets ('controller')
 - combine similar views in single class called ViewSet, combines same logic(dry princple)
-
-- example we use same queryset for all CRUD Views of orders, with viewset we only need to define queryset once.
-
+- ***example we use same queryset for all CRUD Views of orders, with viewset we only need to define queryset once.***
 - ViewSet provides methods, list(), create(), update(), delete(), retreive()
-
 - We can use routers, we don't need to configure urls a lot.
 
 
 ### api/urls.py 
 - add DefaultRouter 
-
 - register with a `prefix` ("orders",in our case) and `viewset` ("OrderViewSet", in our case)
 - registering will auto-create 2 routes to OrderViewSet : 
 - "/orders/" : for list() and create()
@@ -230,14 +227,13 @@ When we send a POST request to a DRF endpoint (`VIEW`), it triggers the `create 
 
 - with `/order/id` we can retreive, update and delete order with particular id 
 
-
-- All generic View attributes and methods like `serializer_class, permission_classes,  get_queryset,etc.` are also available in ViewSets
+- ***All generic View attributes and methods like `serializer_class, permission_classes,  get_queryset,etc.` are also available in ViewSets***
 
 
 
 ### api/serializers.py 
 `OrderCreateSerializer()`
-- When we want to create instance with help of tested serializer, can do that but `we can only create one instance of child(nested) serializer's model`. 
+- When we want to create instance with help of nested serializer, can do that but `we can only create one instance of child(nested) serializer's model`. 
 
 - example : OrderItem has foreign referencing Order model. OrderItem is child. If we want to create an Order along with ONE OrderItem, we can easily do it by using nested serializer for creation.
 
@@ -251,7 +247,8 @@ When we send a POST request to a DRF endpoint (`VIEW`), it triggers the `create 
 `OrderViewSet()`
 - we want to use different serializer in case of post, so overided get_serializer method.
 
-- override `perform_create()`, to pass rquest.user directly to serializer, serializer's create gets it in validated_data.
+- override `perform_create()`, to pass rquest.user directly to serializer, 
+- ***serializer's create gets it in validated_data.***
 
 - in /orders POST data we can now send : 
 ```
@@ -277,3 +274,5 @@ When we send a POST request to a DRF endpoint (`VIEW`), it triggers the `create 
 - allows us to send limit the number requests per user, anonymus and authenticated both     
 
 
+### Secrety key 
+In Django, the SECRET_KEY is essentially the "master password" for your web application. It is a unique string used to provide cryptographic signing (salting), ensuring that data generated by your server hasn't been tampered with by a user or a third party. Used in sessions, csrf, password reseting, etc. Never commit it.

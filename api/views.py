@@ -1,5 +1,5 @@
 from pyclbr import Class
-from django.db.models import Max
+from django.db.models import Max, Avg
 from django.shortcuts import get_object_or_404
 from api.serializers import OrderCreateSerializer, ProductSerializer, OrderSerializer, ProductInfoSerializer
 from api.models import Product, Order, OrderItem
@@ -19,6 +19,13 @@ def product_list(request):
     products = Product.objects.all()
     serializer = ProductSerializer(products, many=True)
     return Response(serializer.data)
+
+    # if request.method == 'GET':
+    #     return Response({"message": "GET logic"})
+    
+    #  elif request.method == 'POST':
+    #     return Response({"message": "POST logic"}, status=status.HTTP_201_CREATED)
+
 
 @api_view(['GET'])
 def product_detail(request, pk):
@@ -91,6 +98,10 @@ class ProductListCreateView(generics.ListCreateAPIView):
     pagination_class.page_size_query_param = 'size'
     pagination_class.max_page_size = 10
 
+    def get_queryset(self): # this will be called before filter_backends 
+        queryset = super().get_queryset() # we can't use self.get_queryset() here as it will cause infinite recursion 
+        queryset = queryset.annotate(review=Avg('reviews__rating'))
+        return queryset
 
 class OrderViewSet(viewsets.ModelViewSet):
     queryset = Order.objects.prefetch_related('items','items__product').all()
@@ -104,8 +115,8 @@ class OrderViewSet(viewsets.ModelViewSet):
         return Response(serializer.data)
     
     def get_serializer(self, *args, **kwargs):
-        if self.action == 'create' or self.action == 'update' or self.action == 'partial_update':
-            kwargs['context'] = self.get_serializer_context()
+        if self.action == 'create' or self.action == 'update' or self.action == 'partial_update': # partial_update method is for PATCH 
+            kwargs['context'] = self.get_serializer_context() # context is accesible as self.context.get() inside serializer 
             return OrderCreateSerializer(*args, **kwargs)
         return super().get_serializer(*args, **kwargs)
     

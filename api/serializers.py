@@ -5,6 +5,7 @@ from django.db import transaction
 
 
 class ProductSerializer(serializers.ModelSerializer): # ModelSerializer is a serializer that works with Django models
+    review = serializers.FloatField(read_only=True) 
     class Meta:
         model = Product
         # also possible to use exclude instead of fields
@@ -13,6 +14,7 @@ class ProductSerializer(serializers.ModelSerializer): # ModelSerializer is a ser
             'name',
             'price',
             'stock',
+            'review'
         )
 
     def validate_price(self, value): # this a custom validation on price field, validate_<fieldname> is automatically called to validate that field
